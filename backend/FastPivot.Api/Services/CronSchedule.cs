@@ -4,6 +4,33 @@ namespace FastPivot.Api.Services;
 
 public sealed class CronSchedule
 {
+    private static readonly IReadOnlyDictionary<string, int> MonthAliases = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
+    {
+        ["JAN"] = 1,
+        ["FEB"] = 2,
+        ["MAR"] = 3,
+        ["APR"] = 4,
+        ["MAY"] = 5,
+        ["JUN"] = 6,
+        ["JUL"] = 7,
+        ["AUG"] = 8,
+        ["SEP"] = 9,
+        ["OCT"] = 10,
+        ["NOV"] = 11,
+        ["DEC"] = 12
+    };
+
+    private static readonly IReadOnlyDictionary<string, int> DayOfWeekAliases = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
+    {
+        ["SUN"] = 0,
+        ["MON"] = 1,
+        ["TUE"] = 2,
+        ["WED"] = 3,
+        ["THU"] = 4,
+        ["FRI"] = 5,
+        ["SAT"] = 6
+    };
+
     private readonly CronField _seconds;
     private readonly CronField _minutes;
     private readonly CronField _hours;
@@ -41,8 +68,8 @@ public sealed class CronSchedule
             CronField.Parse(parts[1], 0, 59, allowQuestionMark: false),
             CronField.Parse(parts[2], 0, 23, allowQuestionMark: false),
             CronField.Parse(parts[3], 1, 31, allowQuestionMark: true),
-            CronField.Parse(parts[4], 1, 12, allowQuestionMark: false),
-            CronField.Parse(parts[5], 0, 7, allowQuestionMark: true));
+            CronField.Parse(parts[4], 1, 12, allowQuestionMark: false, aliases: MonthAliases),
+            CronField.Parse(parts[5], 0, 7, allowQuestionMark: true, aliases: DayOfWeekAliases));
     }
 
     public IReadOnlyList<DateTimeOffset> GetOccurrences(DateOnly startDate, DateOnly endDate, TimeZoneInfo timeZone)
@@ -112,7 +139,12 @@ public sealed class CronSchedule
 
         public IReadOnlyList<int> Values => _values.Order().ToArray();
 
-        public static CronField Parse(string field, int min, int max, bool allowQuestionMark)
+        public static CronField Parse(
+            string field,
+            int min,
+            int max,
+            bool allowQuestionMark,
+            IReadOnlyDictionary<string, int>? aliases = null)
         {
             if (allowQuestionMark && field == "?")
             {
@@ -124,7 +156,7 @@ public sealed class CronSchedule
 
             foreach (var token in tokens)
             {
-                AddTokenValues(token, min, max, values);
+                AddTokenValues(token, min, max, aliases, values);
             }
 
             if (values.Count == 0)
@@ -140,7 +172,12 @@ public sealed class CronSchedule
             return _values.Contains(value);
         }
 
-        private static void AddTokenValues(string token, int min, int max, HashSet<int> values)
+        private static void AddTokenValues(
+            string token,
+            int min,
+            int max,
+            IReadOnlyDictionary<string, int>? aliases,
+            HashSet<int> values)
         {
             var stepParts = token.Split('/', StringSplitOptions.TrimEntries);
             if (stepParts.Length > 2)
@@ -166,12 +203,12 @@ public sealed class CronSchedule
                     throw new FormatException($"Invalid cron range '{rangePart}'.");
                 }
 
-                start = ParseNumber(range[0], min, max);
-                end = ParseNumber(range[1], min, max);
+                start = ParseValue(range[0], min, max, aliases);
+                end = ParseValue(range[1], min, max, aliases);
             }
             else
             {
-                start = ParseNumber(rangePart, min, max);
+                start = ParseValue(rangePart, min, max, aliases);
                 end = start;
             }
 
@@ -186,11 +223,25 @@ public sealed class CronSchedule
             }
         }
 
+        private static int ParseValue(
+            string value,
+            int min,
+            int max,
+            IReadOnlyDictionary<string, int>? aliases)
+        {
+            if (aliases is not null && aliases.TryGetValue(value, out var aliasValue))
+            {
+                return aliasValue;
+            }
+
+            return ParseNumber(value, min, max);
+        }
+
         private static int ParseNumber(string value, int min, int max)
         {
             if (!int.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out var number))
             {
-                throw new FormatException($"'{value}' is not a valid cron number.");
+                throw new FormatException($"'{value}' is not a valid cron value.");
             }
 
             if (number < min || number > max)
