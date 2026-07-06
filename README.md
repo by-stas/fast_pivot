@@ -21,7 +21,7 @@ Schedules are expected to use JSON items like:
 }
 ```
 
-The backend reads `backend/FastPivot.Api/Data/sample-schedules.json` by default. To point it at a larger generated file, set:
+The backend reads `backend/FastPivot.Api/Data/generated_300_json_items.json` by default. To point it at another generated file, set:
 
 ```bash
 Schedules__JsonPath=/path/to/generated_300_json_items.json
