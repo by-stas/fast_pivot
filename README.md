@@ -78,3 +78,73 @@ cd frontend
 npm install
 npm start
 ```
+
+## Deployment
+
+### Prerequisites
+
+- .NET 8 SDK/runtime for the backend.
+- Node.js compatible with Angular 20, plus npm, for building the frontend.
+- A hosting target for the ASP.NET Core API, such as Linux VM, container host, Azure App Service, IIS, or another .NET-capable platform.
+- A static file host for the Angular app, such as Nginx, Azure Static Web Apps, S3/CloudFront, or the same host that serves the API.
+
+### Build the frontend
+
+```bash
+cd frontend
+npm ci
+npm run build
+```
+
+The production bundle is generated in:
+
+```text
+frontend/dist/fast-pivot-frontend
+```
+
+Deploy this folder to the static web host.
+
+### Publish the backend
+
+```bash
+cd backend/FastPivot.Api
+dotnet restore
+dotnet publish -c Release -o ./publish
+```
+
+Deploy the contents of `backend/FastPivot.Api/publish` to the API host and start the application with:
+
+```bash
+dotnet FastPivot.Api.dll
+```
+
+### Configure schedule data
+
+The default deployed data file is:
+
+```text
+Data/generated_300_json_items.json
+```
+
+To use another file, set the environment variable before starting the API:
+
+```bash
+Schedules__JsonPath=/absolute/path/to/generated_300_json_items.json
+```
+
+### Connect frontend to backend
+
+For local development, Angular uses `frontend/proxy.conf.json` to forward `/api` requests to `http://localhost:5000`.
+
+For deployment, configure the static host or reverse proxy so browser requests to `/api/*` are forwarded to the ASP.NET Core API. Example Nginx location:
+
+```nginx
+location /api/ {
+    proxy_pass http://127.0.0.1:5000/api/;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+```
+
+If the frontend and API are hosted on different domains, update the backend CORS configuration in `Program.cs` to allow the deployed frontend origin.
