@@ -1,0 +1,135 @@
+<section class="pivot-card">
+  <header class="pivot-header">
+    <div>
+      <p class="eyebrow">Weekly test schedule</p>
+      <h1>Pivot table</h1>
+      <p class="subtitle">
+        Rows are grouped by project, product, and version. Columns are grouped by current week days and test suites.
+      </p>
+    </div>
+
+    <div class="toolbar">
+      <label>
+        Timezone
+        <input type="text" [(ngModel)]="timezone" placeholder="UTC">
+      </label>
+
+      <label>
+        Week start
+        <input type="date" [(ngModel)]="weekStart">
+      </label>
+
+      <button type="button" (click)="moveWeek(-1)" [disabled]="loading">Previous</button>
+      <button type="button" (click)="loadSelectedWeek()" [disabled]="loading">Load week</button>
+      <button type="button" (click)="moveWeek(1)" [disabled]="loading">Next</button>
+    </div>
+  </header>
+
+  <div class="filters" *ngIf="pivot">
+    <label>
+      Project
+      <select [(ngModel)]="filters.project">
+        <option value="">All projects</option>
+        <option *ngFor="let project of projectOptions" [value]="project">{{ project }}</option>
+      </select>
+    </label>
+
+    <label>
+      Product
+      <select [(ngModel)]="filters.product">
+        <option value="">All products</option>
+        <option *ngFor="let product of productOptions" [value]="product">{{ product }}</option>
+      </select>
+    </label>
+
+    <label>
+      Version
+      <select [(ngModel)]="filters.version">
+        <option value="">All versions</option>
+        <option *ngFor="let version of versionOptions" [value]="version">{{ version }}</option>
+      </select>
+    </label>
+
+    <label>
+      TestSuite
+      <select [(ngModel)]="filters.testSuite">
+        <option value="">All suites</option>
+        <option *ngFor="let suite of pivot.testSuites" [value]="suite">{{ suite }}</option>
+      </select>
+    </label>
+
+    <button type="button" class="secondary" (click)="resetFilters()">Reset filters</button>
+  </div>
+
+  <p class="status" *ngIf="loading">Loading pivot data...</p>
+  <p class="error" *ngIf="error">{{ error }}</p>
+
+  <div class="warnings" *ngIf="pivot?.warnings?.length">
+    <strong>Skipped schedules:</strong>
+    <ul>
+      <li *ngFor="let warning of pivot?.warnings">
+        {{ warning.title }} / {{ warning.crontab }}: {{ warning.message }}
+      </li>
+    </ul>
+  </div>
+
+  <div class="table-wrap" *ngIf="pivot && !loading">
+    <table class="pivot-table">
+      <thead>
+        <tr>
+          <th rowspan="2" class="row-header sticky-left">Project</th>
+          <th rowspan="2" class="row-header sticky-left second">Product</th>
+          <th rowspan="2" class="row-header sticky-left third">Version</th>
+          <th
+            *ngFor="let day of pivot.days; trackBy: trackDay"
+            class="day-header"
+            [attr.colspan]="displayedTestSuites.length"
+          >
+            {{ day.label }}
+          </th>
+        </tr>
+        <tr>
+          <ng-container *ngFor="let day of pivot.days; trackBy: trackDay">
+            <th *ngFor="let suite of displayedTestSuites; trackBy: trackSuite" class="suite-header">
+              {{ suite }}
+            </th>
+          </ng-container>
+        </tr>
+      </thead>
+
+      <tbody>
+        <tr *ngFor="let row of filteredRows; trackBy: trackRow">
+          <th class="row-value sticky-left">{{ row.project }}</th>
+          <th class="row-value sticky-left second">{{ row.product }}</th>
+          <th class="row-value sticky-left third">{{ row.version }}</th>
+
+          <ng-container *ngFor="let day of pivot.days; trackBy: trackDay">
+            <td *ngFor="let suite of displayedTestSuites; trackBy: trackSuite">
+              <ng-container *ngIf="cellItems(row, day.date, suite) as items">
+                <span class="empty-cell" *ngIf="items.length === 0">-</span>
+
+                <div class="cell-stack" *ngIf="items.length > 0">
+                  <article class="test-card" *ngFor="let item of items; trackBy: trackCellItem">
+                    <div class="test-card-title">
+                      <time>{{ item.scheduledTime }}</time>
+                      <strong>{{ item.test }}</strong>
+                    </div>
+                    <div>{{ item.title }}</div>
+                    <div>{{ item.machine }} / {{ item.image }}</div>
+                    <div class="description">{{ item.description }}</div>
+                  </article>
+                </div>
+              </ng-container>
+            </td>
+          </ng-container>
+        </tr>
+
+        <tr *ngIf="filteredRows.length === 0">
+          <td class="empty-state" [attr.colspan]="3 + (pivot.days.length * displayedTestSuites.length)">
+            No schedules match the current week and filters.
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
