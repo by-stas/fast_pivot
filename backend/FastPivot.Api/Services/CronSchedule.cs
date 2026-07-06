@@ -49,7 +49,7 @@ public sealed class CronSchedule
     {
         var occurrences = new List<DateTimeOffset>();
 
-        for (var date = startDate; date <= endDate; date = date.AddDays(1))
+        for (var date = startDate; date.DayNumber <= endDate.DayNumber; date = date.AddDays(1))
         {
             if (!MatchesDate(date))
             {
