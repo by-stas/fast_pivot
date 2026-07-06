@@ -1,5 +1,8 @@
+using FastPivot.Api.Authorization;
 using FastPivot.Api.Models;
 using FastPivot.Api.Services;
+using Microsoft.AspNetCore.Authentication.Negotiate;
+using Microsoft.AspNetCore.Authorization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,18 +18,44 @@ builder.Services.AddCors(options =>
         policy
             .WithOrigins("http://localhost:4200")
             .AllowAnyHeader()
-            .AllowAnyMethod();
+            .AllowAnyMethod()
+            .AllowCredentials();
     });
 });
 
+builder.Services
+    .AddOptions<WindowsAuthorizationOptions>()
+    .Bind(builder.Configuration.GetSection(WindowsAuthorizationOptions.SectionName))
+    .Validate(options => options.AllowedGroups.All(group => !string.IsNullOrWhiteSpace(group)), "Allowed groups cannot be empty.")
+    .ValidateOnStart();
+
+builder.Services
+    .AddAuthentication(NegotiateDefaults.AuthenticationScheme)
+    .AddNegotiate();
+
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("WindowsGroupAccess", policy =>
+    {
+        policy.AddAuthenticationSchemes(NegotiateDefaults.AuthenticationScheme);
+        policy.AddRequirements(new WindowsGroupRequirement());
+    });
+});
+
+builder.Services.AddSingleton<IAuthorizationHandler, WindowsGroupAuthorizationHandler>();
 builder.Services.AddSingleton<IScheduleRepository, JsonScheduleRepository>();
 builder.Services.AddSingleton<ISchedulePivotService, SchedulePivotService>();
 
 var app = builder.Build();
 
 app.UseCors();
+app.UseAuthentication();
+app.UseAuthorization();
 
-app.MapGet("/api/schedules", async (
+var api = app.MapGroup("/api")
+    .RequireAuthorization("WindowsGroupAccess");
+
+api.MapGet("/schedules", async (
     IScheduleRepository repository,
     CancellationToken cancellationToken) =>
 {
@@ -34,7 +63,7 @@ app.MapGet("/api/schedules", async (
     return Results.Ok(schedules);
 });
 
-app.MapGet("/api/pivot/current-week", async (
+api.MapGet("/pivot/current-week", async (
     ISchedulePivotService pivotService,
     string? timezone,
     CancellationToken cancellationToken) =>
@@ -51,7 +80,7 @@ app.MapGet("/api/pivot/current-week", async (
     }
 });
 
-app.MapGet("/api/pivot", async (
+api.MapGet("/pivot", async (
     ISchedulePivotService pivotService,
     DateOnly weekStart,
     string? timezone,
@@ -68,7 +97,7 @@ app.MapGet("/api/pivot", async (
     }
 });
 
-app.MapGet("/api/pivot/cell-key", (DateOnly date, string testSuite) =>
+api.MapGet("/pivot/cell-key", (DateOnly date, string testSuite) =>
 {
     return Results.Ok(new { key = SchedulePivotService.CreateCellKey(date, testSuite) });
 });

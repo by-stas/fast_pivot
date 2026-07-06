@@ -9,7 +9,10 @@ export class SchedulePivotService {
 
   getCurrentWeekPivot(timezone = 'UTC'): Observable<PivotResponse> {
     const params = new HttpParams().set('timezone', timezone);
-    return this.http.get<PivotResponse>('/api/pivot/current-week', { params });
+    return this.http.get<PivotResponse>('/api/pivot/current-week', {
+      params,
+      withCredentials: true
+    });
   }
 
   getPivot(weekStart: string, timezone = 'UTC'): Observable<PivotResponse> {
@@ -17,6 +20,9 @@ export class SchedulePivotService {
       .set('weekStart', weekStart)
       .set('timezone', timezone);
 
-    return this.http.get<PivotResponse>('/api/pivot', { params });
+    return this.http.get<PivotResponse>('/api/pivot', {
+      params,
+      withCredentials: true
+    });
   }
 }

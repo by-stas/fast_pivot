@@ -35,6 +35,29 @@ The ASP.NET Core API exposes:
 - `GET /api/pivot/current-week?timezone=UTC` - current week pivot.
 - `GET /api/pivot?weekStart=2026-07-06&timezone=UTC` - selected week pivot.
 
+All `/api` endpoints are protected by a Windows/Negotiate authorization policy. The default configuration allows everyone:
+
+```json
+"WindowsAuthorization": {
+  "AllowedGroups": [
+    "Everyone"
+  ]
+}
+```
+
+To restrict access, replace `Everyone` with Windows domain or local group names:
+
+```json
+"WindowsAuthorization": {
+  "AllowedGroups": [
+    "DOMAIN\\QA Engineers",
+    "DOMAIN\\Release Managers"
+  ]
+}
+```
+
+The special values `Everyone` and `*` allow unrestricted API access. Any other value requires an authenticated Windows user that belongs to one of the configured groups.
+
 Pivot rows are grouped by:
 
 - Project
@@ -148,3 +171,16 @@ location /api/ {
 ```
 
 If the frontend and API are hosted on different domains, update the backend CORS configuration in `Program.cs` to allow the deployed frontend origin.
+
+### Configure Windows authorization
+
+By default, API access is open because `WindowsAuthorization:AllowedGroups` contains `Everyone`.
+
+To restrict access in deployment, configure allowed Windows groups with environment variables:
+
+```bash
+WindowsAuthorization__AllowedGroups__0='DOMAIN\QA Engineers'
+WindowsAuthorization__AllowedGroups__1='DOMAIN\Release Managers'
+```
+
+When hosted behind IIS, enable Windows Authentication for the application. When hosted directly with Kestrel, the API uses ASP.NET Core Negotiate authentication; Linux hosts require Kerberos/domain configuration for real Windows group resolution.
