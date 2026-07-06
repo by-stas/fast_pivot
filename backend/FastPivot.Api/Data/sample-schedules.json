@@ -1,0 +1,38 @@
+[
+  {
+    "Project": "Project_1",
+    "Title": "Project_1_Regular",
+    "crontab": "0 30 17 ? * *",
+    "Description": "Bug_987565",
+    "Product": "Product_2026",
+    "Version": "1.0.0.1",
+    "Machine": "Host-160",
+    "Image": "160_Win10_22H2",
+    "TestSuite": "Stability",
+    "Test": "Stability_Win10_160"
+  },
+  {
+    "Project": "Project_1",
+    "Title": "Project_1_Smoke",
+    "crontab": "0 00 08 ? * *",
+    "Description": "Bug_987566",
+    "Product": "Product_2026",
+    "Version": "1.0.0.1",
+    "Machine": "Host-161",
+    "Image": "161_Win10_22H2",
+    "TestSuite": "Smoke",
+    "Test": "Smoke_Win10_161"
+  },
+  {
+    "Project": "Project_2",
+    "Title": "Project_2_Regression",
+    "crontab": "0 15 12 ? * 1-5",
+    "Description": "Bug_987567",
+    "Product": "Product_2025",
+    "Version": "2.0.0.1",
+    "Machine": "Host-162",
+    "Image": "162_Win11_23H2",
+    "TestSuite": "Regression",
+    "Test": "Regression_Win11_162"
+  }
+]
